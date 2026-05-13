@@ -1,3 +1,6 @@
+import Link from "next/link";
+import AddToCartButton from "@/components/AddToCartButton";
+
 type Warehouse = {
   id: string;
   name: string;
@@ -18,20 +21,21 @@ type Product = {
 
 async function getProducts(): Promise<Product[]> {
   try {
-    const res = await fetch(
+    const response = await fetch(
       `${process.env.NEXT_PUBLIC_BASE_URL}/api/products`,
       {
         cache: "no-store",
       }
     );
 
-    if (!res.ok) {
-      return [];
+    if (!response.ok) {
+      throw new Error("Failed to fetch products");
     }
 
-    return res.json();
+    return response.json();
   } catch (error) {
-    console.error(error);
+    console.error("Failed to fetch products", error);
+
     return [];
   }
 }
@@ -41,9 +45,18 @@ export default async function HomePage() {
 
   return (
     <main className="min-h-screen bg-gray-100 p-8">
-      <h1 className="mb-8 text-4xl font-bold">
-        Inventory System
-      </h1>
+      <div className="mb-8 flex items-center justify-between">
+        <h1 className="text-4xl font-bold">
+          Inventory System
+        </h1>
+
+        <Link
+          href="/cart"
+          className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
+        >
+          Go To Cart
+        </Link>
+      </div>
 
       {products.length === 0 ? (
         <div className="rounded-lg bg-white p-6 shadow">
@@ -62,7 +75,7 @@ export default async function HomePage() {
 
               <div className="mt-4 grid gap-4 md:grid-cols-2">
                 {product.inventories.map((inventory) => {
-                  const available =
+                  const availableStock =
                     inventory.totalStock -
                     inventory.reservedStock;
 
@@ -80,25 +93,29 @@ export default async function HomePage() {
 
                       <p>
                         <span className="font-semibold">
-                          Total:
+                          Total Stock:
                         </span>{" "}
                         {inventory.totalStock}
                       </p>
 
                       <p>
                         <span className="font-semibold">
-                          Reserved:
+                          Reserved Stock:
                         </span>{" "}
                         {inventory.reservedStock}
                       </p>
 
                       <p className="font-bold text-green-600">
-                        Available: {available}
+                        Available Stock: {availableStock}
                       </p>
 
-                      <button className="mt-4 rounded-lg bg-black px-4 py-2 text-white transition hover:bg-gray-800">
-                        Reserve
-                      </button>
+                      <AddToCartButton
+                        inventoryId={inventory.id}
+                        productName={product.name}
+                        warehouseName={
+                          inventory.warehouse.name
+                        }
+                      />
                     </div>
                   );
                 })}
