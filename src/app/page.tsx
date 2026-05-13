@@ -1,124 +1,102 @@
-import Link from "next/link";
+
 import AddToCartButton from "@/components/AddToCartButton";
 
-type Warehouse = {
-  id: string;
-  name: string;
-};
-
-type Inventory = {
-  id: string;
-  totalStock: number;
-  reservedStock: number;
-  warehouse: Warehouse;
-};
-
-type Product = {
-  id: string;
-  name: string;
-  inventories: Inventory[];
-};
-
-async function getProducts(): Promise<Product[]> {
-  try {
-    const response = await fetch(
-      `${process.env.NEXT_PUBLIC_BASE_URL}/api/products`,
-      {
-        cache: "no-store",
-      }
-    );
-
-    if (!response.ok) {
-      throw new Error("Failed to fetch products");
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error("Failed to fetch products", error);
-
-    return [];
-  }
-}
+import { prisma } from "@/lib/prisma";
+import Navbar from "@/components/Navbar";
 
 export default async function HomePage() {
-  const products = await getProducts();
+  const products = await prisma.product.findMany({
+    include: {
+      inventories: {
+        include: {
+          warehouse: true,
+        },
+      },
+    },
+  });
 
   return (
-    <main className="min-h-screen bg-gray-100 p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <h1 className="text-4xl font-bold">
-          Inventory System
-        </h1>
-
-        <Link
-          href="/cart"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-white transition hover:bg-blue-700"
-        >
-          Go To Cart
-        </Link>
-      </div>
+    <main className="min-h-screen bg-gray-100 p-8 text-black">
+      <Navbar />
 
       {products.length === 0 ? (
-        <div className="rounded-lg bg-white p-6 shadow">
-          <p>No products found.</p>
+        <div className="rounded-xl bg-white p-6 shadow">
+          <p className="text-lg text-gray-700">
+            No products found.
+          </p>
         </div>
       ) : (
         <div className="grid gap-6">
           {products.map((product) => (
             <div
               key={product.id}
-              className="rounded-xl bg-white p-6 shadow"
+              className="rounded-2xl bg-white p-6 shadow-md"
             >
-              <h2 className="text-2xl font-semibold">
+              <h2 className="text-2xl font-bold text-black">
                 {product.name}
               </h2>
 
-              <div className="mt-4 grid gap-4 md:grid-cols-2">
-                {product.inventories.map((inventory) => {
-                  const availableStock =
-                    inventory.totalStock -
-                    inventory.reservedStock;
+              <div className="mt-6 grid gap-4 md:grid-cols-2">
+                {product.inventories.map(
+                  (inventory) => {
+                    const availableStock =
+                      inventory.totalStock -
+                      inventory.reservedStock;
 
-                  return (
-                    <div
-                      key={inventory.id}
-                      className="rounded-lg border p-4"
-                    >
-                      <p>
-                        <span className="font-semibold">
-                          Warehouse:
-                        </span>{" "}
-                        {inventory.warehouse.name}
-                      </p>
+                    return (
+                      <div
+                        key={inventory.id}
+                        className="rounded-xl border border-gray-200 bg-gray-50 p-5"
+                      >
+                        <p className="text-gray-800">
+                          <span className="font-semibold">
+                            Warehouse:
+                          </span>{" "}
+                          {
+                            inventory.warehouse
+                              .name
+                          }
+                        </p>
 
-                      <p>
-                        <span className="font-semibold">
-                          Total Stock:
-                        </span>{" "}
-                        {inventory.totalStock}
-                      </p>
+                        <p className="mt-2 text-gray-800">
+                          <span className="font-semibold">
+                            Total Stock:
+                          </span>{" "}
+                          {
+                            inventory.totalStock
+                          }
+                        </p>
 
-                      <p>
-                        <span className="font-semibold">
-                          Reserved Stock:
-                        </span>{" "}
-                        {inventory.reservedStock}
-                      </p>
+                        <p className="mt-2 text-gray-800">
+                          <span className="font-semibold">
+                            Reserved Stock:
+                          </span>{" "}
+                          {
+                            inventory.reservedStock
+                          }
+                        </p>
 
-                      <p className="font-bold text-green-600">
-                        Available Stock: {availableStock}
-                      </p>
+                        <p className="mt-3 text-lg font-bold text-green-600">
+                          Available Stock:{" "}
+                          {availableStock}
+                        </p>
 
-                      <AddToCartButton
-                        inventoryId={inventory.id}
-                        productName={product.name}
-                        warehouseName={
-                          inventory.warehouse.name
-                        }
-                      />
-                    </div>
-                  );
-                })}
+                        <AddToCartButton
+                          inventoryId={
+                            inventory.id
+                          }
+                          productName={
+                            product.name
+                          }
+                          warehouseName={
+                            inventory
+                              .warehouse.name
+                          }
+                        />
+                      </div>
+                    );
+                  }
+                )}
               </div>
             </div>
           ))}
