@@ -1,7 +1,9 @@
 
 "use client";
 
+import { LoaderCircle, XCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import PayNowButton from "./PayNowButton";
 
 type Props = {
@@ -12,9 +14,13 @@ export default function ReservationActions({
   reservationId,
 }: Props) {
   const router = useRouter();
+  const [isCancelling, setIsCancelling] =
+    useState(false);
 
   async function handleCancel() {
     try {
+      setIsCancelling(true);
+
       const response = await fetch(
         `/api/reservations/${reservationId}/release`,
         {
@@ -39,20 +45,35 @@ export default function ReservationActions({
       console.error(error);
 
       alert("Something went wrong");
+    } finally {
+      setIsCancelling(false);
     }
   }
 
   return (
-    <div className="flex gap-4 pt-6">
+    <div className="space-y-3">
       <PayNowButton
         reservationId={reservationId}
       />
 
       <button
+        type="button"
         onClick={handleCancel}
-        className="rounded-lg bg-red-500 px-6 py-3 text-white"
+        disabled={isCancelling}
+        className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-6 py-3 text-sm font-semibold text-red-600 shadow-sm transition hover:bg-red-50 disabled:cursor-not-allowed disabled:text-red-300"
       >
-        Cancel Reservation
+        {isCancelling ? (
+          <LoaderCircle
+            size={18}
+            className="animate-spin"
+          />
+        ) : (
+          <XCircle size={18} />
+        )}
+
+        {isCancelling
+          ? "Cancelling"
+          : "Cancel Reservation"}
       </button>
     </div>
   );

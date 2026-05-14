@@ -9,57 +9,64 @@ export async function createReservation({
   inventoryId,
   quantity,
 }: CreateReservationInput) {
-  return prisma.$transaction(async (tx) => {
-    const inventoryRows = await tx.$queryRaw<
-      {
-        id: string;
-        totalStock: number;
-        reservedStock: number;
-      }[]
-    >`
-      SELECT *
-      FROM "Inventory"
-      WHERE id = ${inventoryId}
-      FOR UPDATE
-    `;
+  return prisma.$transaction(
+    async (tx) => {
+      const inventoryRows = await tx.$queryRaw<
+        {
+          id: string;
+          totalStock: number;
+          reservedStock: number;
+        }[]
+      >`
+        SELECT *
+        FROM "Inventory"
+        WHERE id = ${inventoryId}
+        FOR UPDATE
+      `;
 
-    const inventory = inventoryRows[0];
+      const inventory = inventoryRows[0];
 
-    if (!inventory) {
-      throw new Error("Inventory not found");
-    }
+      if (!inventory) {
+        throw new Error("Inventory not found");
+      }
 
-    const availableStock =
-      inventory.totalStock -
-      inventory.reservedStock;
+      const availableStock =
+        inventory.totalStock -
+        inventory.reservedStock;
 
-    if (availableStock < quantity) {
-      throw new Error("Not enough stock");
-    }
+      if (availableStock < quantity) {
+        throw new Error("Not enough stock");
+      }
 
-    await tx.inventory.update({
-      where: {
-        id: inventoryId,
-      },
-      data: {
-        reservedStock: {
-          increment: quantity,
+      await tx.inventory.update({
+        where: {
+          id: inventoryId,
         },
-      },
-    });
+        data: {
+          reservedStock: {
+            increment: quantity,
+          },
+        },
+      });
 
-    const reservation = await tx.reservation.create({
-      data: {
-        inventoryId,
-        quantity,
-        expiresAt: new Date(
-          Date.now() + 10 * 60 * 1000
-        ),
-      },
-    });
+      const reservation =
+        await tx.reservation.create({
+          data: {
+            inventoryId,
+            quantity,
+            expiresAt: new Date(
+              Date.now() + 10 * 60 * 1000
+            ),
+          },
+        });
 
-    return reservation;
-  });
+      return reservation;
+    },
+    {
+      maxWait: 10000,
+      timeout: 15000,
+    }
+  );
 }
 
 export async function confirmReservation(
